@@ -1,0 +1,18 @@
+{
+    "name": "staruml.golang",
+    "title": "Golang",
+    "description": "Golang code generation and reverse engineering.",
+    "homepage": "https://github.com/ddkknd/staruml-golang",
+    "issues": "https://github.com/ddkknd/staruml-golang/issues",
+    "keywords": ["golang"],
+    "version": "0.0.1",
+    "author": {
+        "name": "Kim Tae Hyeon",
+        "email": "ddkknd@gmail.com",
+        "url": "https://github.com/ddkknd"
+    },
+    "license": "MIT",
+    "engines": {
+        "staruml": ">=2.0.0"
+    }
+}
