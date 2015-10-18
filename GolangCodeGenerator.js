@@ -109,58 +109,29 @@ define(function (require, exports, module) {
                     result.reject(err);
                 }
             });
-        } else if (elem instanceof type.UMLClass) {
 
-            // AnnotationType
-            if (elem.stereotype === "annotationType") {
-                fullPath = path + "/" + elem.name + ".go";
-                codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
-                this.writePackageDeclaration(codeWriter, elem, options);
-                codeWriter.writeLine();
-                codeWriter.writeLine("import ()");
-                codeWriter.writeLine();
-                this.writeAnnotationType(codeWriter, elem, options);
-                file = FileSystem.getFileForPath(fullPath);
-                FileUtils.writeText(file, codeWriter.getData(), true).then(result.resolve, result.reject);
-
-                // Class
-            } else {
-                fullPath = path + "/" + elem.name + ".go";
-                codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
-                this.writePackageDeclaration(codeWriter, elem, options);
-                codeWriter.writeLine();
-                codeWriter.writeLine("import java.util.*;");
-                codeWriter.writeLine();
-                this.writeClass(codeWriter, elem, options);
-                file = FileSystem.getFileForPath(fullPath);
-                FileUtils.writeText(file, codeWriter.getData(), true).then(result.resolve, result.reject);
-            }
-
-            // Interface
-        } else if (elem instanceof type.UMLInterface) {
-            fullPath = path + "/" + elem.name + ".go";
-            codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
-            this.writePackageDeclaration(codeWriter, elem, options);
-            codeWriter.writeLine();
-            codeWriter.writeLine("import java.util.*;");
-            codeWriter.writeLine();
-            this.writeInterface(codeWriter, elem, options);
-            file = FileSystem.getFileForPath(fullPath);
-            FileUtils.writeText(file, codeWriter.getData(), true).then(result.resolve, result.reject);
-
-            // Enum
-        } else if (elem instanceof type.UMLEnumeration) {
-            fullPath = path + "/" + elem.name + ".go";
-            codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
-            this.writePackageDeclaration(codeWriter, elem, options);
-            codeWriter.writeLine();
-            this.writeEnum(codeWriter, elem, options);
-            file = FileSystem.getFileForPath(fullPath);
-            FileUtils.writeText(file, codeWriter.getData(), true).then(result.resolve, result.reject);
-
-            // Others (Nothing generated.)
         } else {
-            result.resolve();
+            //common
+            fullPath = path + "/" + elem.name + ".go";
+            codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
+            this.writePackageDeclaration(codeWriter, elem, options);
+            codeWriter.writeLine();
+            codeWriter.writeLine("import ()");
+            codeWriter.writeLine();
+
+            if (elem instanceof type.UMLClass) {
+                this.writeClass(codeWriter, elem, options);
+            } else if (elem instanceof type.UMLInterface) {
+                this.writeInterface(codeWriter, elem, options);
+            } else if (elem instanceof type.UMLEnumeration) {
+                this.writeEnum(codeWriter, elem, options);
+            } else {
+                result.resolve();
+                return result.promise();
+            }
+            //this.writeAnnotationType(codeWriter, elem, options);
+            file = FileSystem.getFileForPath(fullPath);
+            FileUtils.writeText(file, codeWriter.getData(), true).then(result.resolve, result.reject);
         }
         return result.promise();
     };
@@ -172,13 +143,15 @@ define(function (require, exports, module) {
      * @return {string}
      */
     GolangCodeGenerator.prototype.getVisibility = function (elem) {
+        var str = elem.name;
+
         switch (elem.visibility) {
             case UML.VK_PUBLIC:
-                return "public";
+
+                return  str.substring(0, 1).toUpperCase() + str.substring(1, str.length);//  "public";
             case UML.VK_PROTECTED:
-                return "protected";
             case UML.VK_PRIVATE:
-                return "private";
+                return  str.substring(0, 1).toLowerCase() + str.substring(1, str.length);
         }
         return null;
     };
@@ -189,11 +162,18 @@ define(function (require, exports, module) {
      * @return {Array.<string>}
      */
     GolangCodeGenerator.prototype.getModifiers = function (elem) {
+
+
         var modifiers = [];
+
+
+
         var visibility = this.getVisibility(elem);
         if (visibility) {
             modifiers.push(visibility);
         }
+
+        /*
         if (elem.isStatic === true) {
             modifiers.push("static");
         }
@@ -206,6 +186,8 @@ define(function (require, exports, module) {
         if (elem.concurrency === UML.CCK_CONCURRENT) {
             modifiers.push("synchronized");
         }
+        */
+
         // transient
         // volatile
         // strictfp
@@ -297,13 +279,17 @@ define(function (require, exports, module) {
      * @param {Object} options
      */
     GolangCodeGenerator.prototype.writePackageDeclaration = function (codeWriter, elem, options) {
-        var path = null;
+        /*
         if (elem._parent) {
             path = _.map(elem._parent.getPath(this.baseModel), function (e) { return e.name; }).join(".");
         }
         if (path) {
             codeWriter.writeLine("package " + path );
         }
+        */
+        console.log("package path ::::"+elem._parent.name );
+
+        return  codeWriter.writeLine("package " + elem._parent.name );
     };
 
     /**
@@ -315,17 +301,34 @@ define(function (require, exports, module) {
     GolangCodeGenerator.prototype.writeConstructor = function (codeWriter, elem, options) {
         if (elem.name.length > 0) {
             var terms = [];
+            var str = elem.name; // 이름
+            var sturctName =  this.getVisibility(elem);
             // Doc
             this.writeDoc(codeWriter, "Default constructor", options);
             // Visibility
-            var visibility = this.getVisibility(elem);
-            if (visibility) {
-                terms.push(visibility);
+            terms.push("func ")
+
+            //var visibility = this.getVisibility(elem);
+
+            if ( !elem.visibility || elem.visibility == UML.VK_PUBLIC ){
+                terms.push("New")
+                terms.push(str.substring(0, 1).toUpperCase() + str.substring(1, str.length) ) ;//  "public";
+            } else {
+                terms.push("new")
+                terms.push(str.substring(0, 1).toLowerCase() + str.substring(1, str.length) ) ;
             }
-            terms.push(elem.name + "()");
+
+
+            terms.push(" *"+ sturctName+" ");
             codeWriter.writeLine(terms.join(" ") + " {");
+            codeWriter.indent();
+            codeWriter.writeLine("return &"+ sturctName+"{}" )
+
             codeWriter.writeLine("}");
+            codeWriter.outdent();
+
         }
+        console.debug(codeWriter);
     };
 
     /**
@@ -340,19 +343,25 @@ define(function (require, exports, module) {
             // doc
             this.writeDoc(codeWriter, elem.documentation, options);
             // modifiers
+
+
             var _modifiers = this.getModifiers(elem);
             if (_modifiers.length > 0) {
                 terms.push(_modifiers.join(" "));
             }
+
+            //terms.push(elem.name);
+
+
             // type
             terms.push(this.getType(elem));
-            // name
-            terms.push(elem.name);
+            /*
             // initial value
             if (elem.defaultValue && elem.defaultValue.length > 0) {
                 terms.push("= " + elem.defaultValue);
             }
-            codeWriter.writeLine(terms.join(" ") + ";");
+            */
+            codeWriter.writeLine(terms.join(" ") + "");
         }
     };
 
@@ -365,10 +374,15 @@ define(function (require, exports, module) {
      * @param {boolean} skipParams
      */
     GolangCodeGenerator.prototype.writeMethod = function (codeWriter, elem, options, skipBody, skipParams) {
+
         if (elem.name.length > 0) {
             var terms = [];
             var params = elem.getNonReturnParameters();
             var returnParam = elem.getReturnParameter();
+            console.debug("params :::::"+ params);
+            console.debug("returnParam :::::"+ returnParam);
+
+            var structName = this.getVisibility(elem._parent);
 
             // doc
             var doc = elem.documentation.trim();
@@ -390,17 +404,34 @@ define(function (require, exports, module) {
             }
             this.writeDoc(codeWriter, doc, options);
 
-            // modifiers
+
+            terms.push("func ")
+
+            if ( elem.isStatic === true ) {
+
+            }else {
+                terms.push("( ")
+                terms.push(strcutName)
+                terms.push(" this")
+                terms.push(") ")
+            }
+            // modifiers (name)
             var _modifiers = this.getModifiers(elem);
+
+
             if (_modifiers.length > 0) {
                 terms.push(_modifiers.join(" "));
             }
 
             // type
+
+
+
+
             if (returnParam) {
                 terms.push(this.getType(returnParam));
             } else {
-                terms.push("void");
+                terms.push("");
             }
 
             // name + parameters
@@ -458,29 +489,43 @@ define(function (require, exports, module) {
      * @param {type.Model} elem
      * @param {Object} options
      */
+
+
     GolangCodeGenerator.prototype.writeClass = function (codeWriter, elem, options) {
         var i, len, terms = [];
 
         // Doc
+
+
         var doc = elem.documentation.trim();
+
         if (ProjectManager.getProject().author && ProjectManager.getProject().author.length > 0) {
             doc += "\n@author " + ProjectManager.getProject().author;
         }
+
         this.writeDoc(codeWriter, doc, options);
 
         // Modifiers
+
+        terms.push("type\n");
+        codeWriter.writeLine(terms.join(" "),"(");
+
+        //terms.writeLine();
+        codeWriter.indent();
+
         var _modifiers = this.getModifiers(elem);
+        codeWriter.writeLine(_modifiers+" struct {")
+
+        /*
         if ( _.contains(_modifiers, "abstract") !== true && _.some(elem.operations, function (op) { return op.isAbstract === true; })) {
             _modifiers.push("abstract");
         }
+
         if (_modifiers.length > 0) {
             terms.push(_modifiers.join(" "));
         }
-
-        // Class
-        terms.push("class");
-        terms.push(elem.name);
-
+        */
+        /*
         // Extends
         var _extends = this.getSuperClasses(elem);
         if (_extends.length > 0) {
@@ -492,42 +537,55 @@ define(function (require, exports, module) {
         if (_implements.length > 0) {
             terms.push("implements " + _.map(_implements, function (e) { return e.name; }).join(", "));
         }
-        codeWriter.writeLine(terms.join(" ") + " {");
-        codeWriter.writeLine();
-        codeWriter.indent();
 
-        // Constructor
-        this.writeConstructor(codeWriter, elem, options);
-        codeWriter.writeLine();
+        // (from associations)
+
+         var associations = Repository.getRelationshipsOf(elem, function (rel) {
+         return (rel instanceof type.UMLAssociation);
+         });
+
+         for (i = 0, len = associations.length; i < len; i++) {
+         var asso = associations[i];
+         if (asso.end1.reference === elem && asso.end2.navigable === true) {
+         this.writeMemberVariable(codeWriter, asso.end2, options);
+         codeWriter.writeLine();
+         }
+         if (asso.end2.reference === elem && asso.end1.navigable === true) {
+         this.writeMemberVariable(codeWriter, asso.end1, options);
+         codeWriter.writeLine();
+         }
+         }
+         */
+        codeWriter.indent();
 
         // Member Variables
         // (from attributes)
+
         for (i = 0, len = elem.attributes.length; i < len; i++) {
             this.writeMemberVariable(codeWriter, elem.attributes[i], options);
-            codeWriter.writeLine();
         }
-        // (from associations)
-        var associations = Repository.getRelationshipsOf(elem, function (rel) {
-            return (rel instanceof type.UMLAssociation);
-        });
-        for (i = 0, len = associations.length; i < len; i++) {
-            var asso = associations[i];
-            if (asso.end1.reference === elem && asso.end2.navigable === true) {
-                this.writeMemberVariable(codeWriter, asso.end2, options);
-                codeWriter.writeLine();
-            }
-            if (asso.end2.reference === elem && asso.end1.navigable === true) {
-                this.writeMemberVariable(codeWriter, asso.end1, options);
-                codeWriter.writeLine();
-            }
-        }
+
+        codeWriter.writeLine("}")
+        codeWriter.outdent();
+
+        codeWriter.writeLine(")")
+        codeWriter.outdent()
+
+        // Constructor
+        codeWriter.writeLine("//Constructor")
+
+        this.writeConstructor(codeWriter, elem, options);
+        codeWriter.writeLine();
+        //@todo 여기 멈춤
+
+        codeWriter.writeLine();
 
         // Methods
         for (i = 0, len = elem.operations.length; i < len; i++) {
             this.writeMethod(codeWriter, elem.operations[i], options, false, false);
             codeWriter.writeLine();
         }
-
+        debugger;
         // Extends methods
         if (_extends.length > 0) {
             for (i = 0, len = _extends[0].operations.length; i < len; i++) {
