@@ -126,7 +126,7 @@ define(function (require, exports, module) {
                 result.resolve();
                 return result.promise();
             }
-            //this.writeAnnotationType(codeWriter, elem, options);
+
             file = FileSystem.getFileForPath(fullPath);
             FileUtils.writeText(file, codeWriter.getData(), true).then(result.resolve, result.reject);
         }
@@ -375,7 +375,7 @@ define(function (require, exports, module) {
             var returnParam = elem.getReturnParameter();
             console.debug("params :::::" + params);
             console.debug("returnParam :::::" + returnParam);
-
+            debugger;
             var structName = this.getVisibility(elem._parent);
 
             // doc
@@ -512,18 +512,25 @@ define(function (require, exports, module) {
             terms.push(_modifiers.join(" "));
         }
         */
-        /*
+
         // Extends
+
         var _extends = this.getSuperClasses(elem);
         if (_extends.length > 0) {
-            terms.push("extends " + _extends[0].name);
+            codeWriter.indent();
+            codeWriter.writerLine(_extends[0].name + "/* extend  */");
         }
-         // Implements
+        codeWriter.outdentine();
         var _implements = this.getSuperInterfaces(elem);
         if (_implements.length > 0) {
-            terms.push("implements " + _.map(_implements, function (e) { return e.name; }).join(", "));
+            //terms.push
+            console.debug("implements " + _.map(_implements, function (e) {
+                return e.name;
+            }) + ", ");
         }
-         // (from associations)
+        /*
+        // Implements
+          // (from associations)
           var associations = Repository.getRelationshipsOf(elem, function (rel) {
          return (rel instanceof type.UMLAssociation);
          });
@@ -570,15 +577,18 @@ define(function (require, exports, module) {
         }
         debugger;
         // Extends methods
+
+        /*
         if (_extends.length > 0) {
             for (i = 0, len = _extends[0].operations.length; i < len; i++) {
                 _modifiers = this.getModifiers(_extends[0].operations[i]);
-                if (_.contains(_modifiers, "abstract") === true) {
+                if( _.contains(_modifiers, "abstract") === true ) {
                     this.writeMethod(codeWriter, _extends[0].operations[i], options, false, false);
                     codeWriter.writeLine();
                 }
             }
         }
+        */
 
         // Interface methods
         for (var j = 0; j < _implements.length; j++) {
@@ -587,7 +597,7 @@ define(function (require, exports, module) {
                 codeWriter.writeLine();
             }
         }
-
+        /*
         // Inner Definitions
         for (i = 0, len = elem.ownedElements.length; i < len; i++) {
             var def = elem.ownedElements[i];
@@ -606,6 +616,7 @@ define(function (require, exports, module) {
                 codeWriter.writeLine();
             }
         }
+        */
 
         codeWriter.outdent();
         codeWriter.writeLine("}");
